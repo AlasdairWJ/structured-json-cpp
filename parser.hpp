@@ -53,14 +53,7 @@ public:
 
 	bool operator()(const std::string& line, auto& value, const auto& descriptor)
 	{
-		auto result = parse(line.cbegin(), line.cend(), value, descriptor);
-
-		if (!result.success)
-		{
-			std::cout << "fail, dist: " << (result.it - line.begin()) << '\n';
-		}
-
-		return result.success;
+		return parse(line.cbegin(), line.cend(), value, descriptor).success;
 	}
 
 private:
