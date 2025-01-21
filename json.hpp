@@ -124,12 +124,12 @@ struct string_assigner<char>
 	}
 };
 
-template <int N>
+template <std::size_t N>
 struct string_assigner<char[N]>
 {
 	void operator()(char (&value)[N], const std::string& newValue)
 	{
-		auto it = std::copy_n(newValue.begin(), std::min(N, static_cast<int>(newValue.size())), std::begin(value));
+		auto it = std::copy_n(newValue.begin(), std::min(N, newValue.size()), std::begin(value));
 		if (it < std::end(value))
 			*it = '\0';
 	}
@@ -234,7 +234,6 @@ inline char unscape(const char c)
 template <typename S>
 inline void write_escaped_string(std::stringstream& ss, const S& str)
 {
-	ss << '"';
 	for (const char c : str)
 	{
 		if (char escapee{}; needs_escaping(c, escapee))
@@ -253,7 +252,6 @@ inline void write_escaped_string(std::stringstream& ss, const S& str)
 			ss << c;
 		}
 	}
-	ss << '"';
 }
 
 struct Stringify
@@ -302,13 +300,17 @@ private:
 
 	void write(const char value, const String&)
 	{
+		_ss << '"';
 		write_escaped_string(_ss, std::string_view{ &value, 1 });
+		_ss << '"';
 	}
 
 	template <typename T>
 	void write(const T& value, const String&)
 	{
+		_ss << '"';
 		write_escaped_string(_ss, value);
+		_ss << '"';
 	}
 
 	template <typename T, typename D>
