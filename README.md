@@ -1,5 +1,5 @@
 # structured-json-cpp
- *(c++17)* Compile-time json structure definitions for native read and writing
+ **(c++17)** Single-file compile-time json structure definitions for native read and writing
 
 A descriptor provides description of a structure that can be used to read/write JSON
 
@@ -48,7 +48,7 @@ std::cout << json::stringify(123, json::number); // 123
 std::cout << json::stringify("hello", json::string); // -> "hello"
 ```
 
-The non-trivial tpyes `json::array` and `json::object` must define a descriptor for their elements
+The non-trivial types `json::array` and `json::object` must define a descriptor for their elements
 
 ```c++
 int sequence[]{ 2, 3, 5, 7 };
@@ -90,11 +90,11 @@ constexpr auto LineDescriptor = std::tuple(
 
 ## What types can be used for what descriptors?
 
- - *Boolean* be convertible to/from `bool`
- - *Number* must be an arithmetic type
- - *String* must be `char`, `char[]`, or convertible from `std::string`
- - *Array* must be a static array, must support `push_back`, or have a custom `json::array_inserter` defined for it
- - *Object* must be a static array, must support `emplace`, or have a custom `json::object_inserter` defined for it
+ - **Boolean** be convertible to/from `bool`
+ - **Number** must be an arithmetic type
+ - **String** must be `char`, `char[]`, or convertible from `std::string`
+ - **Array** must be a static array, must support `push_back`, or have a custom `json::array_inserter` defined for it
+ - **Object** must support `emplace`, or have a custom `json::object_inserter` defined for it
 
 An example of a `json::array_inserter` for a `std::set` could be defined like so 
 
