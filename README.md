@@ -28,15 +28,7 @@ json::parse("{ \"x\": 3, \"y\": 4 }", point, PointDescriptor) // point == Point{
 
 We write JSON using `json::stringify( <object>, <descriptor>[, <formatting>]) -> std::string`
 
-We read JSON use `json::parse(std::string_view, <object>, <descriptor>) -> json::parse_result`
-
-```c++
-struct json::parse_result
-{
-	std::string_view::const_iterator it;
-	bool success;
-};
-```
+We read JSON use `json::parse(std::string_view, <object>, <descriptor>) -> bool`
 
 A descriptor informs how an object should be represented as JSON.
 
@@ -93,8 +85,8 @@ constexpr auto LineDescriptor = std::tuple(
  - **Boolean** be convertible to/from `bool`
  - **Number** must be an arithmetic type
  - **String** must be `char`, `char[]`, or convertible from `std::string`
- - **Array** must be a static array, must support `push_back`, or have a custom `json::array_inserter` defined for it
- - **Object** must support `emplace`, or have a custom `json::object_inserter` defined for it
+ - **Array** must either be a static array, support `push_back`, or have a custom `json::array_inserter` defined for it
+ - **Object** must either support `emplace`, or have a custom `json::object_inserter` defined for it
 
 An example of a `json::array_inserter` for a `std::set` could be defined like so 
 
@@ -154,4 +146,5 @@ struct json::Formatting
 ## Todo:
 
  - Support `std::optional` for `null`
- - Manual validation of descriptors to improve error messages
+ - Explicit type validation of descriptors to improve error messages
+ - Support some form of dynamic content (i.e. how to read into a variant based on type?)
