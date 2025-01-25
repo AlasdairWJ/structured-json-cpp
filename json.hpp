@@ -28,18 +28,33 @@ struct object { const T element; };
 template <typename T>
 object(const T&) -> object<T>;
 
-constexpr struct Custom {} custom;
+template <typename T, typename E, typename D>
+struct field
+{
+	const std::string_view name;
+	E T::* member_ptr;
+	D descriptor;
+};
+
+template <typename T, typename E, typename D>
+field(const char* n, E T::* m, const D& d) -> field<T, E, D>;
+
+template <typename T, typename E, typename D>
+field(const std::string_view, E T::* m, const D& d) -> field<T, E, D>;
 
 #ifndef __cpp_lib_type_identity
-template<class T>
+template<typename T>
 struct type_identity { using type = T; };
 #else
-template<class T>
+template<typename T>
 using type_identity = std::type_identity<T>;
 #endif
 
+template <typename T, typename = void>
+struct array_value_type : type_identity<void> {};
+
 template <typename T>
-struct array_value_type : type_identity<typename T::value_type> {};
+struct array_value_type<T, typename T::value_type> : type_identity<typename T::value_type> {};
 
 template <typename T, std::size_t N>
 struct array_value_type<T[N]> : type_identity<T> {};
@@ -47,8 +62,11 @@ struct array_value_type<T[N]> : type_identity<T> {};
 template <typename T>
 using array_value_type_t = typename array_value_type<T>::type;
 
+template <typename T, typename = void>
+struct object_value_type : type_identity<void> {};
+
 template <typename T>
-struct object_value_type : type_identity<typename T::value_type::second_type> {};
+struct object_value_type<T, typename T::value_type::second_type> : type_identity<typename T::value_type::second_type> {};
 
 template <typename T>
 using object_value_type_t = typename object_value_type<T>::type;
@@ -84,6 +102,18 @@ struct is_valid_descriptor_for<T, object<D>> : std::bool_constant<
 	is_valid_descriptor_for_v<object_value_type_t<T>, D>
 > {};
 
+template <typename T, typename F>
+struct is_valid_field_for : std::false_type {};
+
+template <typename T, typename F>
+constexpr bool is_valid_field_for_v = is_valid_field_for<T, F>::value;
+
+template <typename T, typename E, typename D>
+struct is_valid_field_for<T, field<T, E, D>> : std::bool_constant<is_valid_descriptor_for_v<E, D>> {};
+
+template <typename T, typename... Fs>
+struct is_valid_descriptor_for<T, std::tuple<Fs...>> : std::bool_constant<std::conjunction_v<is_valid_field_for<T, Fs>...>> {};
+
 template <typename T>
 struct is_trivial : std::false_type {};
 
@@ -93,20 +123,6 @@ constexpr bool is_trivial_v = is_trivial<T>::value;
 template <> struct is_trivial<Boolean> : std::true_type {};
 template <> struct is_trivial<Number> : std::true_type {};
 template <> struct is_trivial<String> : std::true_type {};
-
-template <typename T, typename E, typename D>
-struct field
-{
-	const std::string_view name;
-	E T::* member_ptr;
-	D descriptor;
-};
-
-template <typename T, typename E, typename D>
-field(const char* n, E T::* m, const D& d) -> field<T, E, D>;
-
-template <typename T, typename E, typename D>
-field(const std::string_view, E T::* m, const D& d) -> field<T, E, D>;
 
 namespace literals
 {
@@ -145,7 +161,6 @@ struct object_inserter
 	}
 };
 
-
 using iterator = std::string_view::const_iterator;
 
 struct Formatting
@@ -168,15 +183,23 @@ struct Stringifier
 	}
 
 	template <typename T, typename D>
-	auto& operator()(const T& value, const D& desc)
+	Stringifier& operator()(const T& value, const D& desc)
 	{
-		write(value, desc);
-		return *this;
+		if constexpr (is_valid_descriptor_for_v<T, D>)
+		{
+			write(value, desc);
+			return *this;
+		}
+		else
+		{
+			static_assert(false, "Attempting to stringify a value that is not valid for the given descriptor");
+			return *this;
+		}
 	}
 
 private:
 
-	void spacing(const bool modifier = false)
+	inline void spacing(const bool modifier = false)
 	{
 		if (_formatting.newline_elements && !modifier)
 		{
@@ -189,6 +212,11 @@ private:
 		{
 			_os << ' ';
 		}
+	}
+
+	inline void write_null()
+	{
+		_os << literals::null;
 	}
 
 	template <typename T>
@@ -232,7 +260,7 @@ private:
 		_os << '"';
 		for (const char c : value)
 		{
-			if (char escapee{}; impl::needs_escaping(c, escapee))
+			if (char escapee{}; needs_escaping(c, escapee))
 			{
 				_os << '\\' << escapee;
 
@@ -394,7 +422,15 @@ struct Parser
 	template <typename T, typename D>
 	bool operator()(T& value, const D& desc)
 	{
-		return parse(value, desc);
+		if constexpr (is_valid_descriptor_for_v<T, D>)
+		{
+			return parse(value, desc);
+		}
+		else
+		{
+			static_assert(false, "Attempting to parse into a value that is not valid for the given descriptor");
+			return false;
+		}
 	}
 
 	bool ignore();
